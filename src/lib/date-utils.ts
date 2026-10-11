@@ -39,10 +39,27 @@ export function formatDateBR(dateStr: string): string {
 }
 
 /**
- * Adiciona 30 dias a uma data base no formato YYYY-MM-DD
+ * Adiciona N dias a uma data base no formato YYYY-MM-DD
  */
 export function addDaysToDate(dateStr: string, days: number): string {
+  if (!dateStr) return '';
   const date = parseISO(dateStr);
   const newDate = addDays(date, days);
   return format(newDate, 'yyyy-MM-dd');
+}
+
+/**
+ * Retorna a data da próxima sexta-feira a partir de uma data base
+ */
+export function getNextFriday(baseDateStr: string): string {
+  if (!baseDateStr) return '';
+  const date = parseISO(baseDateStr);
+  const dayOfWeek = date.getDay(); // 0: Dom, 1: Seg, 2: Ter, 3: Qua, 4: Qui, 5: Sex, 6: Sab
+  // Quantos dias faltam para sexta (5)?
+  let daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+  if (daysUntilFriday === 0) {
+    daysUntilFriday = 7; // Se já é sexta, próxima sexta
+  }
+  const nextFriday = addDays(date, daysUntilFriday);
+  return format(nextFriday, 'yyyy-MM-dd');
 }
