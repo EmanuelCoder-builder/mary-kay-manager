@@ -2,23 +2,35 @@
 
 @theme {
   --font-serif: var(--font-serif), Georgia, serif;
-  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
+  
+  --color-ios-bg: #F2F2F7;
+  --color-ios-card: #FFFFFF;
+  --color-ios-border: #E5E5EA;
+  --color-ios-text: #1C1C1E;
+  --color-ios-subtext: #8E8E93;
   
   --color-mk-pink: #E11D48;
-  --color-mk-rose: #F43F5E;
+  --color-mk-rose: #FB7185;
   --color-mk-blush: #FFF1F2;
-  --color-mk-gold: #C5A059;
-  --color-mk-dark: #121214;
 }
 
 :root {
-  --background: #FAFAFA;
-  --foreground: #18181B;
+  --background: #F2F2F7;
+  --foreground: #1C1C1E;
 }
 
-/* Touch targets and mobile usability */
+body {
+  background-color: #F2F2F7;
+  color: #1C1C1E;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Touch targets and mobile usability iOS */
 button, a, input, select {
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Tap Target Mínimo de 44x44px exigido por RN04 */
@@ -27,21 +39,25 @@ button, a, input, select {
   min-width: 44px;
 }
 
-/* Scrollbar sutil e elegante */
+/* Smooth iOS card shadows */
+.ios-card {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(229, 229, 234, 0.7);
+}
+
+.ios-card-interactive {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ios-card-interactive:active {
+  transform: scale(0.985);
+}
+
+/* Scrollbar invisível estilo iOS */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #F472B6;
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #E11D48;
+  width: 0px;
+  height: 0px;
+  display: none;
 }

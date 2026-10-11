@@ -5,12 +5,9 @@ import {
   Key, 
   User, 
   RotateCcw, 
-  Database, 
-  Save, 
   Check, 
-  Sparkles,
   MessageCircle,
-  ExternalLink
+  Database
 } from 'lucide-react';
 import { ConsultantSettings } from '@/lib/store';
 
@@ -40,138 +37,110 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="space-y-5 pb-24">
-      {/* Título */}
-      <div>
-        <h2 className="text-xl font-serif font-bold text-zinc-950">
-          Configurações da Consultora
+    <div className="space-y-4 pb-28">
+      {/* TÍTULO ESTILO AJUSTES DO IPHONE */}
+      <div className="px-1">
+        <h2 className="text-2xl font-bold tracking-tight text-[#1C1C1E]">
+          Ajustes
         </h2>
-        <p className="text-xs text-zinc-500">
-          Personalize seus dados comerciais e chave Pix para os disparos via WhatsApp.
+        <p className="text-xs text-[#8E8E93]">
+          Seus dados e chave Pix para cobrança
         </p>
       </div>
 
       {savedSuccess && (
-        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-medium flex items-center gap-2">
-          <Check className="w-4 h-4 text-emerald-600" />
+        <div className="p-3.5 rounded-[18px] bg-emerald-50 border border-emerald-100 text-xs text-emerald-800 font-medium flex items-center gap-2">
+          <Check className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
           <span>Configurações salvas com sucesso!</span>
         </div>
       )}
 
-      {/* FORMULÁRIO DE DADOS */}
-      <form onSubmit={handleSave} className="space-y-4">
-        <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-2xs space-y-4">
+      {/* FORMULÁRIO ESTILO GROUPED TABLE DO IOS */}
+      <form onSubmit={handleSave} className="space-y-3.5">
+        <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-3.5">
           <div>
-            <label className="text-xs font-semibold text-zinc-800 flex items-center gap-1.5 mb-1">
-              <User className="w-3.5 h-3.5 text-rose-600" />
-              Nome da Consultora (para mensagens)
+            <label className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block mb-1">
+              Seu Nome (como aparecerá na mensagem)
             </label>
             <input
               type="text"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Ex: Consultora Emanuela"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:border-rose-500"
+              className="w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-sm text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
               required
             />
-            <span className="text-[11px] text-zinc-400 mt-1 block">
-              Será inserido na assinatura da mensagem do WhatsApp.
-            </span>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-zinc-800 flex items-center gap-1.5 mb-1">
-              <Key className="w-3.5 h-3.5 text-rose-600" />
+            <label className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block mb-1">
               Chave Pix de Recebimento
             </label>
             <input
               type="text"
               value={chavePix}
               onChange={(e) => setChavePix(e.target.value)}
-              placeholder="Ex: seu-email@gmail.com, CPF ou telefone"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:border-rose-500 font-mono"
+              placeholder="CPF, celular, e-mail ou aleatória"
+              className="w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-sm text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
               required
             />
-            <span className="text-[11px] text-zinc-400 mt-1 block">
-              A chave Pix que suas clientes usarão para pagar as parcelas em 1 clique.
+            <span className="text-[11px] text-[#8E8E93] mt-1 block">
+              Será enviada na mensagem do WhatsApp para a cliente pagar fácil.
             </span>
           </div>
 
           <button
             type="submit"
-            className="tap-target w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs active:scale-98 transition-all flex items-center justify-center gap-2"
+            className="tap-target w-full py-3.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-98 text-white font-bold text-xs shadow-xs transition-transform"
           >
-            <Save className="w-4 h-4" />
-            <span>Salvar Dados</span>
+            Salvar Alterações
           </button>
         </div>
       </form>
 
-      {/* PRÉ-VISUALIZAÇÃO DA MENSAGEM DO WHATSAPP */}
-      <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-200/80 space-y-2">
-        <div className="flex items-center gap-1.5 text-emerald-800 text-xs font-bold">
-          <MessageCircle className="w-4 h-4 fill-emerald-600 text-white" />
-          <span>Exemplo da Mensagem de Cobrança (WhatsApp)</span>
-        </div>
-        <div className="bg-white rounded-xl p-3 border border-emerald-100 text-[11px] text-zinc-700 space-y-1 font-sans">
+      {/* EXEMPLO DA MENSAGEM DO WHATSAPP */}
+      <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
+        <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block">
+          Como a cliente recebe no WhatsApp:
+        </span>
+        <div className="bg-[#E7F8E8] rounded-2xl p-3.5 border border-[#CDECCF] text-xs text-[#1C1C1E] space-y-1.5 leading-relaxed">
           <p>Olá, Mariana! Tudo bem? ✨</p>
           <p>
             Passando para lembrar da parcela <strong>1/3</strong> da sua comprinha Mary Kay (Kit TimeWise 3D), no valor de{' '}
             <strong>R$ 116,63</strong>, com vencimento para <strong>hoje</strong>.
           </p>
-          <p className="font-mono bg-zinc-50 p-1 rounded border border-zinc-200 text-zinc-800">
+          <p className="bg-white/80 p-2 rounded-xl text-xs font-mono border border-emerald-200">
             🔑 <strong>Chave Pix:</strong> {chavePix || 'sua-chave-pix'}
           </p>
           <p>
-            Assim que realizar o pagamento, você pode me enviar o comprovante por aqui. Muito obrigada pelo carinho! 💖
+            Assim que fizer o Pix, pode me mandar o comprovante por aqui. Muito obrigada pelo carinho! 💖
           </p>
-          <p className="text-zinc-500 italic">_– {nome || 'Consultora'}_</p>
+          <p className="text-[#8E8E93] italic">_– {nome || 'Sua Consultora'}_</p>
         </div>
       </div>
 
-      {/* INTEGRAÇÃO COM SUPABASE (INFORMATIVO) */}
-      <div className="bg-white rounded-2xl p-4 border border-zinc-200 shadow-2xs space-y-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
-            <Database className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-xs font-bold text-zinc-900">
-              Conexão com Banco de Dados (Supabase)
-            </h3>
-            <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              Modo Local Ativo (Pronto para Uso)
-            </span>
-          </div>
-        </div>
-        <p className="text-[11px] text-zinc-500 leading-relaxed">
-          Atualmente o app está operando em <strong>Modo Local</strong> com persistência segura no seu navegador. Quando você criar seu projeto no Supabase, basta rodar o script{' '}
-          <code className="text-rose-600 font-semibold">supabase/schema.sql</code> e preencher o arquivo <code className="text-rose-600 font-semibold">.env.local</code>. O sistema está totalmente preparado para conectar instantaneamente!
-        </p>
-      </div>
-
-      {/* RESET DE DADOS DE DEMONSTRAÇÃO */}
-      <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-2xs space-y-2">
-        <h3 className="text-xs font-bold text-zinc-900">
-          Dados de Demonstração
-        </h3>
-        <p className="text-[11px] text-zinc-500">
-          Deseja restaurar as clientes e vendas de exemplo iniciais?
+      {/* DADOS DE DEMONSTRAÇÃO */}
+      <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
+        <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block">
+          Dados de Teste
+        </span>
+        <p className="text-xs text-[#8E8E93]">
+          Deseja recarregar as clientes e vendas de exemplo originais?
         </p>
         <button
           onClick={() => {
             if (
               window.confirm(
-                'Deseja restaurar os dados de demonstração originais? Isso substituirá os registros atuais.'
+                'Deseja restaurar as clientes de exemplo originais?'
               )
             ) {
               onResetData();
             }
           }}
-          className="tap-target flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold"
+          className="tap-target px-3.5 py-2.5 rounded-xl bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA] text-xs font-semibold flex items-center gap-1.5"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Restaurar Dados de Exemplo</span>
+          <span>Restaurar Exemplos</span>
         </button>
       </div>
     </div>

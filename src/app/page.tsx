@@ -248,13 +248,13 @@ export default function Home() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7]">
         <div className="text-center space-y-2">
-          <span className="font-serif tracking-[0.2em] text-lg font-bold text-zinc-950 block">
+          <span className="font-serif tracking-[0.2em] text-lg font-bold text-[#1C1C1E] block">
             MARY KAY
           </span>
           <span className="text-xs text-rose-600 animate-pulse font-medium">
-            Carregando sua plataforma...
+            Carregando...
           </span>
         </div>
       </div>
@@ -262,21 +262,21 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-100/60 flex flex-col justify-between">
-      {/* Container Principal Mobile-First */}
-      <div className="w-full max-w-md mx-auto bg-stone-50 min-h-screen shadow-2xl relative flex flex-col">
-        {/* Header Superior com Identidade Mary Kay */}
+    <div className="min-h-screen bg-[#E5E5EA]/40 flex flex-col justify-between">
+      {/* Container Principal Mobile-First iOS */}
+      <div className="w-full max-w-md mx-auto bg-[#F2F2F7] min-h-screen shadow-xl relative flex flex-col">
+        {/* Header Superior estilo iOS */}
         <Header
           consultantName={settings.nome}
           todayFormatted={todayFormatted}
           onOpenSettings={() => setActiveTab('settings')}
         />
 
-        {/* Notificação Toast Flutuante */}
+        {/* Notificação Cápsula estilo Dynamic Island do iOS */}
         {toastMessage && (
-          <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-zinc-900/90 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold backdrop-blur-md border border-zinc-700 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-              <Check className="w-3 h-3" />
+          <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-[#1C1C1E]/95 text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-semibold backdrop-blur-xl border border-white/10 animate-in fade-in slide-in-from-top-3 duration-200">
+            <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+              <Check className="w-2.5 h-2.5 stroke-[3]" />
             </div>
             <span>{toastMessage}</span>
           </div>

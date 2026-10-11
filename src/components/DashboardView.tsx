@@ -2,20 +2,17 @@
 
 import React, { useMemo } from 'react';
 import { 
-  TrendingUp, 
-  AlertCircle, 
-  CheckCircle2, 
   MessageCircle, 
-  Calendar, 
+  Check, 
   Clock, 
-  DollarSign, 
-  ArrowUpRight,
-  ShieldCheck,
-  Check
+  ShieldCheck, 
+  ChevronRight,
+  Plus,
+  Users
 } from 'lucide-react';
 import { CobrancaComCliente } from '@/types/database';
 import { ConsultantSettings } from '@/lib/store';
-import { getTodayRecife, getCurrentMonthRangeRecife, formatDateBR } from '@/lib/date-utils';
+import { formatDateBR } from '@/lib/date-utils';
 import { generateWhatsAppChargeLink } from '@/lib/whatsapp';
 
 interface DashboardViewProps {
@@ -37,34 +34,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onMarkPaid,
   onNavigateToTab,
 }) => {
-
-  // 1. Cobranças do Dia (RF06): data_vencimento == today E status_pago == false
+  // 1. Cobranças do Dia (RF06): vencimento == today e status_pago == false
   const cobrancasHoje = useMemo(() => {
-    return charges.filter(
-      (c) => c.data_vencimento === today && !c.status_pago
-    );
+    if (!today) return [];
+    return charges.filter((c) => c.data_vencimento === today && !c.status_pago);
   }, [charges, today]);
 
-  // 2. Cobranças Atrasadas: data_vencimento < today E status_pago == false
+  // 2. Cobranças Atrasadas
   const cobrancasAtrasadas = useMemo(() => {
-    return charges.filter(
-      (c) => c.data_vencimento < today && !c.status_pago
-    );
+    if (!today) return [];
+    return charges.filter((c) => c.data_vencimento < today && !c.status_pago);
   }, [charges, today]);
 
-  // 3. Métricas Financeiras do Mês Corrente (RF05)
+  // 3. Métricas do Mês (RF05)
   const metricasMes = useMemo(() => {
     let totalAReceberMes = 0;
     let totalRecebidoMes = 0;
 
     charges.forEach((c) => {
-      // Vencimentos neste mês
       if (c.data_vencimento >= startOfMonth && c.data_vencimento <= endOfMonth) {
         if (!c.status_pago) {
           totalAReceberMes += c.valor_parcela;
         }
       }
-      // Pagamentos recebidos neste mês
       if (c.status_pago) {
         const dataPag = c.data_pagamento || c.data_vencimento;
         if (dataPag >= startOfMonth && dataPag <= endOfMonth) {
@@ -85,78 +77,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24">
-      {/* Banner / Card de Destaque Financeiro (RF05) */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-rose-950 text-white p-5 shadow-xl border border-rose-950/40">
-        <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-rose-600/20 blur-3xl pointer-events-none" />
-        <div className="relative z-10 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase font-medium tracking-widest text-rose-300">
-              Previsão do Mês
+    <div className="space-y-6 pb-28">
+      {/* CARTÃO RESUMO FINANCEIRO ESTILO APPLE CARTEIRA */}
+      <section className="bg-white rounded-[24px] p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-[#E5E5EA]/80 space-y-4">
+        <div>
+          <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block">
+            Previsão do Mês
+          </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-3xl font-extrabold text-[#1C1C1E] tracking-tight">
+              {formatCurrency(metricasMes.totalAReceberMes)}
             </span>
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-200 border border-rose-400/30 font-medium">
-              Fuso Recife (PE)
+            <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
+              a receber
             </span>
           </div>
+        </div>
 
-          <div>
-            <p className="text-xs text-zinc-400 font-normal">Total a Receber este Mês</p>
-            <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-3xl font-extrabold tracking-tight text-white font-serif">
-                {formatCurrency(metricasMes.totalAReceberMes)}
-              </span>
-            </div>
+        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#F2F2F7]">
+          <div className="bg-[#F2F2F7]/70 rounded-[18px] p-3">
+            <span className="text-[11px] text-[#8E8E93] font-medium block">
+              ✓ Já Recebido
+            </span>
+            <p className="text-base font-bold text-emerald-600 mt-0.5">
+              {formatCurrency(metricasMes.totalRecebidoMes)}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-800/80">
-            <div className="bg-zinc-800/40 backdrop-blur-xs rounded-2xl p-3 border border-zinc-700/30">
-              <span className="text-[11px] text-zinc-400 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Já Recebido
-              </span>
-              <p className="text-sm font-bold text-emerald-400 mt-1">
-                {formatCurrency(metricasMes.totalRecebidoMes)}
-              </p>
-            </div>
-
-            <div className="bg-zinc-800/40 backdrop-blur-xs rounded-2xl p-3 border border-zinc-700/30">
-              <span className="text-[11px] text-zinc-400 flex items-center gap-1">
-                <Clock className="w-3 h-3 text-rose-400" /> A Cobrar Hoje
-              </span>
-              <p className="text-sm font-bold text-rose-300 mt-1">
-                {formatCurrency(valorTotalHoje)}
-              </p>
-            </div>
+          <div className="bg-[#F2F2F7]/70 rounded-[18px] p-3">
+            <span className="text-[11px] text-[#8E8E93] font-medium block">
+              📅 Para Hoje
+            </span>
+            <p className="text-base font-bold text-rose-600 mt-0.5">
+              {formatCurrency(valorTotalHoje)}
+            </p>
           </div>
         </div>
       </section>
 
-      {/* HUB DE COBRANÇAS DO DIA (RF06 & RF07) */}
+      {/* COBRANÇAS DE HOJE (O FOCO DA MÃE) */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-            <h2 className="text-base font-serif font-bold text-zinc-900 tracking-tight">
-              Hub de Cobranças de Hoje
+          <div>
+            <h2 className="text-lg font-bold text-[#1C1C1E] tracking-tight">
+              Cobranças de Hoje
             </h2>
+            <p className="text-xs text-[#8E8E93]">
+              Envie a mensagem no WhatsApp com 1 toque
+            </p>
           </div>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
-            {cobrancasHoje.length} {cobrancasHoje.length === 1 ? 'pendência' : 'pendências'}
-          </span>
+          {cobrancasHoje.length > 0 && (
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-100">
+              {cobrancasHoje.length} {cobrancasHoje.length === 1 ? 'cliente' : 'clientes'}
+            </span>
+          )}
         </div>
 
         {cobrancasHoje.length === 0 ? (
-          <div className="bg-white rounded-3xl p-6 text-center border border-rose-100 shadow-xs space-y-3">
+          <div className="bg-white rounded-[24px] p-7 text-center border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
             <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6" />
+              <ShieldCheck className="w-6 h-6 stroke-[2.2]" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-zinc-800">
-                Tudo em dia para hoje! ✨
-              </p>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Nenhuma parcela vencendo hoje aguarda cobrança. Excelente gestão!
-              </p>
-            </div>
+            <p className="text-sm font-bold text-[#1C1C1E]">
+              Tudo em dia por hoje! 🎉
+            </p>
+            <p className="text-xs text-[#8E8E93] max-w-xs mx-auto">
+              Nenhuma parcela vence hoje. Todas as suas cobranças estão organizadas.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -176,45 +163,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               return (
                 <div
                   key={item.id_parcela}
-                  className="bg-white rounded-2xl p-4 border border-rose-200/80 shadow-sm hover:shadow-md transition-shadow space-y-3"
+                  className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-3.5"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm font-bold text-zinc-900">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <h3 className="text-base font-bold text-[#1C1C1E]">
                         {item.nome_cliente}
                       </h3>
-                      <p className="text-xs text-zinc-500 line-clamp-1 mt-0.5">
+                      <p className="text-xs text-[#8E8E93] line-clamp-1">
                         {item.descricao_produtos}
                       </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
-                        Parcela {item.numero_da_parcela}/{item.total_de_parcelas}
+                      <span className="inline-block text-[11px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
+                        Parcela {item.numero_da_parcela} de {item.total_de_parcelas}
                       </span>
-                      <p className="text-base font-extrabold text-zinc-950 font-serif mt-1">
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-lg font-extrabold text-[#1C1C1E] block">
                         {formatCurrency(item.valor_parcela)}
-                      </p>
+                      </span>
+                      <span className="text-[11px] font-semibold text-rose-500">
+                        Vence hoje
+                      </span>
                     </div>
                   </div>
 
-                  {/* Ações Rápidas: Disparo WhatsApp (RF07) e Marcar Pago (RF08) */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-rose-50">
+                  {/* AÇÕES LIMPAS ESTILO IPHONE */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#F2F2F7]">
                     <a
                       href={waLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="tap-target flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs active:scale-98 transition-all"
+                      className="tap-target flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white text-xs font-bold shadow-xs transition-transform"
                     >
-                      <MessageCircle className="w-4 h-4 fill-white shrink-0" />
+                      <MessageCircle className="w-4 h-4 fill-white" />
                       <span>Cobrar no Whats</span>
                     </a>
 
                     <button
                       onClick={() => onMarkPaid(item.id_parcela, true)}
-                      className="tap-target flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold active:scale-98 transition-all"
+                      className="tap-target flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#F2F2F7] hover:bg-[#E5E5EA] active:scale-95 text-[#1C1C1E] text-xs font-semibold transition-transform"
                     >
-                      <Check className="w-4 h-4 shrink-0 text-rose-600" />
-                      <span>Marcar Pago</span>
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
+                      <span>Já Pagou</span>
                     </button>
                   </div>
                 </div>
@@ -224,22 +215,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         )}
       </section>
 
-      {/* COBRANÇAS EM ATRASO (Vencidas anteriormente) */}
+      {/* COBRANÇAS EM ATRASO (SE HOUVER) */}
       {cobrancasAtrasadas.length > 0 && (
-        <section className="space-y-3">
+        <section className="space-y-2.5">
           <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-500" />
-              <h2 className="text-sm font-serif font-bold text-zinc-900 tracking-tight">
-                Parcelas em Atraso ({cobrancasAtrasadas.length})
-              </h2>
-            </div>
-            <span className="text-xs text-amber-600 font-semibold">
-              Requer atenção
+            <h3 className="text-sm font-bold text-[#1C1C1E]">
+              Atrasadas ({cobrancasAtrasadas.length})
+            </h3>
+            <span className="text-xs text-amber-600 font-medium">
+              Vencidas antes de hoje
             </span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {cobrancasAtrasadas.map((item) => {
               const waLink = generateWhatsAppChargeLink({
                 telefone: item.telefone_cliente,
@@ -256,37 +244,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               return (
                 <div
                   key={item.id_parcela}
-                  className="bg-amber-50/40 rounded-2xl p-3.5 border border-amber-200/80 shadow-2xs space-y-2.5"
+                  className="bg-white rounded-[20px] p-3.5 border border-[#E5E5EA]/80 shadow-xs flex items-center justify-between gap-3"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="text-xs font-bold text-zinc-900">
-                        {item.nome_cliente}
-                      </h3>
-                      <p className="text-[11px] text-amber-700 mt-0.5">
-                        Venceu em {formatDateBR(item.data_vencimento)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-zinc-950 font-serif">
-                        {formatCurrency(item.valor_parcela)}
-                      </p>
-                    </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-[#1C1C1E]">
+                      {item.nome_cliente}
+                    </h4>
+                    <p className="text-[11px] text-[#8E8E93]">
+                      Venceu em {formatDateBR(item.data_vencimento)} • {formatCurrency(item.valor_parcela)}
+                    </p>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-1.5">
                     <a
                       href={waLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="tap-target flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-600 text-white text-xs font-semibold"
+                      className="tap-target px-3 py-1.5 rounded-lg bg-[#25D366] text-white text-[11px] font-bold flex items-center gap-1"
                     >
                       <MessageCircle className="w-3.5 h-3.5 fill-white" />
-                      <span>Relembrar no WhatsApp</span>
+                      <span>Lembrar</span>
                     </a>
                     <button
                       onClick={() => onMarkPaid(item.id_parcela, true)}
-                      className="tap-target px-3 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-700 text-xs font-medium hover:bg-zinc-50"
+                      className="tap-target px-2.5 py-1.5 rounded-lg bg-[#F2F2F7] text-[#1C1C1E] text-[11px] font-medium"
                     >
                       Pago
                     </button>
@@ -298,32 +279,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </section>
       )}
 
-      {/* AÇÕES RÁPIDAS DE ACESSO */}
-      <section className="grid grid-cols-2 gap-3 pt-2">
+      {/* ATALHOS RÁPIDOS LIMPOS */}
+      <section className="grid grid-cols-2 gap-3 pt-1">
         <button
           onClick={() => onNavigateToTab('new-sale')}
-          className="tap-target p-4 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-left shadow-sm active:scale-98 transition-transform"
+          className="tap-target p-4 rounded-[22px] bg-white border border-[#E5E5EA]/80 text-left shadow-xs hover:border-rose-200 active:scale-98 transition-all flex flex-col justify-between"
         >
-          <span className="text-xs uppercase font-medium tracking-wider text-rose-100">
-            Nova Venda
-          </span>
-          <p className="text-sm font-bold mt-1">Registrar Compra</p>
-          <span className="text-[11px] text-rose-100/90 block mt-0.5">
-            Cálculo de parcelas 30d
-          </span>
+          <div className="w-9 h-9 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-2">
+            <Plus className="w-5 h-5 stroke-[2.5]" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-[#1C1C1E]">Nova Venda</h4>
+            <p className="text-xs text-[#8E8E93]">Registrar produtos</p>
+          </div>
         </button>
 
         <button
           onClick={() => onNavigateToTab('clients')}
-          className="tap-target p-4 rounded-2xl bg-white border border-rose-100 text-left shadow-2xs hover:border-rose-300 active:scale-98 transition-all"
+          className="tap-target p-4 rounded-[22px] bg-white border border-[#E5E5EA]/80 text-left shadow-xs hover:border-rose-200 active:scale-98 transition-all flex flex-col justify-between"
         >
-          <span className="text-xs uppercase font-medium tracking-wider text-rose-600">
-            Clientes
-          </span>
-          <p className="text-sm font-bold text-zinc-900 mt-1">Gerenciar Base</p>
-          <span className="text-[11px] text-zinc-500 block mt-0.5">
-            Cadastrar ou editar
-          </span>
+          <div className="w-9 h-9 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-2">
+            <Users className="w-5 h-5 stroke-[2.2]" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-[#1C1C1E]">Minhas Clientes</h4>
+            <p className="text-xs text-[#8E8E93]">Ver lista de contatos</p>
+          </div>
         </button>
       </section>
     </div>

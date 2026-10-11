@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Settings as SettingsIcon } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 interface HeaderProps {
   consultantName: string;
@@ -14,36 +14,30 @@ export const Header: React.FC<HeaderProps> = ({
   todayFormatted = '', 
   onOpenSettings 
 }) => {
-
   return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-rose-100 shadow-xs">
-      <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Logo Mary Kay Inspirado */}
-        <div className="flex flex-col">
-          <div className="flex items-center gap-1.5">
-            <span className="font-serif tracking-[0.22em] text-xl font-bold text-zinc-950 uppercase">
-              MARY KAY
-            </span>
-            <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
-              Manager
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-[11px] text-zinc-500 font-medium">
-            <Sparkles className="w-3 h-3 text-rose-500 inline" />
-            <span className="truncate max-w-[170px]">{consultantName}</span>
-            <span className="text-zinc-300">•</span>
-            <span className="text-zinc-500">{todayFormatted}</span>
-          </div>
+    <header className="sticky top-0 z-30 bg-[#F2F2F7]/85 backdrop-blur-xl border-b border-[#E5E5EA]/60 px-5 pt-3 pb-2.5">
+      <div className="max-w-md mx-auto flex items-center justify-between">
+        <div>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-500">
+            Mary Kay
+          </span>
+          <h1 className="text-lg font-bold tracking-tight text-[#1C1C1E] leading-tight">
+            Olá, {consultantName.replace('Consultora ', '')}
+          </h1>
+          {todayFormatted && (
+            <p className="text-xs text-[#8E8E93] font-medium">
+              {todayFormatted}
+            </p>
+          )}
         </div>
 
-        {/* Botão de Atalho para Configurações */}
         <button
           onClick={onOpenSettings}
-          className="tap-target flex items-center justify-center p-2 rounded-full text-zinc-600 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-          title="Configurações da Consultora"
-          aria-label="Abrir configurações"
+          className="tap-target w-10 h-10 rounded-full bg-white border border-[#E5E5EA] shadow-xs flex items-center justify-center text-[#3A3A3C] hover:text-rose-600 active:scale-95 transition-all"
+          title="Ajustes"
+          aria-label="Abrir Ajustes"
         >
-          <SettingsIcon className="w-5 h-5" />
+          <Settings className="w-5 h-5" />
         </button>
       </div>
     </header>

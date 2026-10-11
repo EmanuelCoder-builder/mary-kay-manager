@@ -26,7 +26,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#BE185D",
+  themeColor: "#F2F2F7",
 };
 
 export default function RootLayout({
@@ -39,7 +39,7 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${playfairDisplay.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-stone-50 text-zinc-900 font-sans selection:bg-rose-200 selection:text-rose-900">
+      <body className="min-h-full bg-[#F2F2F7] text-[#1C1C1E] font-sans selection:bg-rose-200 selection:text-rose-900">
         {children}
       </body>
     </html>

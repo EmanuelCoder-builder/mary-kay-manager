@@ -5,14 +5,11 @@ import {
   ShoppingBag, 
   Calendar, 
   Calculator, 
-  Sparkles, 
-  CheckCircle, 
   UserPlus, 
-  Plus,
-  ArrowRight
+  Check
 } from 'lucide-react';
 import { Cliente } from '@/types/database';
-import { getTodayRecife, formatDateBR } from '@/lib/date-utils';
+import { formatDateBR } from '@/lib/date-utils';
 import { calculateInstallments, CalculatedInstallment } from '@/lib/calculations';
 
 interface NewSaleViewProps {
@@ -36,8 +33,7 @@ const POPULAR_MK_PRODUCTS = [
   'Batom Líquido Matte',
   'Microdermoabrasão',
   'Perfume Live Fearlessly',
-  'Máscara Lash Intensity',
-  'Delineador em Gel',
+  'Máscara de Cílios',
   'Primer Facial FPS 15',
 ];
 
@@ -57,7 +53,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
   const [dataVenda, setDataVenda] = useState(today || '');
   const [formError, setFormError] = useState('');
 
-  // Cálculo das parcelas em tempo real (RF04, RN01, RN02)
+  // Cálculo das parcelas em tempo real
   const numericTotal = parseFloat(valorTotalStr.replace(',', '.')) || 0;
 
   const previewInstallments = useMemo(() => {
@@ -80,15 +76,15 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClientId) {
-      setFormError('Selecione uma cliente para registrar a venda.');
+      setFormError('Selecione uma cliente.');
       return;
     }
     if (!descricao.trim()) {
-      setFormError('Informe a descrição dos produtos vendidos.');
+      setFormError('Informe o que a cliente comprou.');
       return;
     }
     if (numericTotal <= 0) {
-      setFormError('O valor total da venda deve ser maior que zero.');
+      setFormError('Digite o valor total da venda.');
       return;
     }
 
@@ -101,7 +97,6 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
       previewInstallments
     );
 
-    // Limpar formulário e dar feedback
     setDescricao('');
     setValorTotalStr('');
     setParcelasCount(1);
@@ -110,47 +105,47 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
   };
 
   return (
-    <div className="space-y-5 pb-24">
-      {/* Título */}
-      <div>
-        <h2 className="text-xl font-serif font-bold text-zinc-950">
-          Registrar Venda
+    <div className="space-y-4 pb-28">
+      {/* TÍTULO ESTILO IOS */}
+      <div className="px-1">
+        <h2 className="text-2xl font-bold tracking-tight text-[#1C1C1E]">
+          Nova Venda
         </h2>
-        <p className="text-xs text-zinc-500">
-          Geração automática de parcelas com intervalo de 30 dias (ou à vista).
+        <p className="text-xs text-[#8E8E93]">
+          As parcelas serão calculadas e agendadas a cada 30 dias.
         </p>
       </div>
 
       {formError && (
-        <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+        <div className="p-3.5 rounded-[18px] bg-rose-50 border border-rose-100 text-xs text-rose-700">
           {formError}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* 1. SELEÇÃO DA CLIENTE */}
-        <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-2xs space-y-2">
+        <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-zinc-800">
-              Cliente Compradora
+            <label className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider">
+              Cliente
             </label>
             <button
               type="button"
               onClick={onNavigateToClients}
-              className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-0.5"
+              className="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1"
             >
-              <UserPlus className="w-3 h-3" />
+              <UserPlus className="w-3.5 h-3.5" />
               <span>Cadastrar nova</span>
             </button>
           </div>
 
           {clients.length === 0 ? (
-            <div className="text-xs text-zinc-500 py-2">
-              Nenhuma cliente cadastrada.{' '}
+            <div className="text-xs text-[#8E8E93] py-2">
+              Nenhuma cliente cadastrada ainda.{' '}
               <button
                 type="button"
                 onClick={onNavigateToClients}
-                className="text-rose-600 font-semibold underline"
+                className="text-rose-600 font-bold underline"
               >
                 Cadastrar agora
               </button>
@@ -159,7 +154,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
             <select
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 bg-zinc-50/50 focus:outline-none focus:border-rose-500 focus:bg-white"
+              className="w-full px-3.5 py-3 rounded-xl bg-[#F2F2F7] text-sm font-semibold text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
               required
             >
               {clients.map((c) => (
@@ -171,25 +166,24 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
           )}
         </div>
 
-        {/* 2. DESCRIÇÃO DOS PRODUTOS & SUGESTÕES */}
-        <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-2xs space-y-3">
-          <label className="text-xs font-semibold text-zinc-800 block">
-            Descrição dos Produtos
+        {/* 2. PRODUTOS & SUGESTÕES RÁPIDAS */}
+        <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-3">
+          <label className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block">
+            Produtos Vendidos
           </label>
 
-          <textarea
+          <input
+            type="text"
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
-            placeholder="Ex: 1x Kit TimeWise 3D + 2x Batom Líquido Matte"
-            rows={2}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
+            placeholder="Ex: Kit TimeWise 3D + Batom Matte"
+            className="w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-sm text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
             required
           />
 
-          {/* Chips de Produtos Frequentes da Mary Kay */}
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-1.5">
-              Sugestões Rápidas:
+            <span className="text-[11px] text-[#8E8E93] block mb-1.5 font-medium">
+              Toque rápido para adicionar:
             </span>
             <div className="flex flex-wrap gap-1.5">
               {POPULAR_MK_PRODUCTS.map((prod) => (
@@ -197,7 +191,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
                   key={prod}
                   type="button"
                   onClick={() => handleAddChip(prod)}
-                  className="tap-target px-2.5 py-1 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-medium border border-rose-200/60 transition-colors"
+                  className="tap-target px-3 py-1.5 rounded-full bg-[#F2F2F7] hover:bg-rose-50 active:scale-95 text-[#1C1C1E] text-xs font-medium border border-[#E5E5EA] transition-all"
                 >
                   + {prod}
                 </button>
@@ -206,15 +200,15 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
           </div>
         </div>
 
-        {/* 3. VALOR, DATA E NÚMERO DE PARCELAS */}
-        <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-2xs space-y-4">
+        {/* 3. VALOR TOTAL E DATA */}
+        <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-zinc-800 block mb-1">
+              <label className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block mb-1">
                 Valor Total (R$)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-[#8E8E93]">
                   R$
                 </span>
                 <input
@@ -224,30 +218,30 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
                   value={valorTotalStr}
                   onChange={(e) => setValorTotalStr(e.target.value)}
                   placeholder="0,00"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-zinc-200 text-sm font-bold text-zinc-900 focus:outline-none focus:border-rose-500"
+                  className="w-full pl-10 pr-3 py-3 rounded-xl bg-[#F2F2F7] text-base font-bold text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-zinc-800 block mb-1">
-                Data da Venda
+              <label className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block mb-1">
+                Data da Compra
               </label>
               <input
                 type="date"
                 value={dataVenda}
                 onChange={(e) => setDataVenda(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:border-rose-500"
+                className="w-full px-3 py-3 rounded-xl bg-[#F2F2F7] text-xs font-semibold text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
                 required
               />
             </div>
           </div>
 
-          {/* Seletor de Parcelamento */}
+          {/* CONDIÇÃO DE PARCELAMENTO ESTILO SEGMENTED CONTROL */}
           <div>
-            <label className="text-xs font-semibold text-zinc-800 block mb-1.5">
-              Condição de Pagamento (RN01 & RN02)
+            <label className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block mb-1.5">
+              Forma de Pagamento
             </label>
             <div className="grid grid-cols-4 gap-1.5">
               {[1, 2, 3, 4, 5, 6, 10, 12].map((num) => (
@@ -255,10 +249,10 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
                   key={num}
                   type="button"
                   onClick={() => setParcelasCount(num)}
-                  className={`tap-target py-2 px-1 rounded-xl text-xs font-bold transition-all border ${
+                  className={`tap-target py-2.5 rounded-xl text-xs font-bold transition-all ${
                     parcelasCount === num
-                      ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                      : 'bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-rose-50 hover:border-rose-200'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA]'
                   }`}
                 >
                   {num === 1 ? 'À vista' : `${num}x`}
@@ -268,33 +262,27 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
           </div>
         </div>
 
-        {/* 4. PRÉ-VISUALIZAÇÃO DAS PARCELAS GERADAS */}
+        {/* 4. CRONOGRAMA DAS PARCELAS */}
         {previewInstallments.length > 0 && (
-          <div className="bg-rose-50/50 rounded-2xl p-4 border border-rose-200/80 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
-                <Calculator className="w-4 h-4 text-rose-600" />
-                Cronograma de Vencimentos
-              </span>
-              <span className="text-[11px] text-rose-700 font-medium">
-                {parcelasCount === 1 ? 'Pagamento imediato' : `Intervalo de 30 dias`}
-              </span>
-            </div>
+          <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
+            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block">
+              Vencimentos Programados
+            </span>
 
             <div className="space-y-1.5">
               {previewInstallments.map((p) => (
                 <div
                   key={p.numero_da_parcela}
-                  className="bg-white rounded-xl p-2.5 border border-rose-100 flex items-center justify-between text-xs"
+                  className="bg-[#F2F2F7]/60 rounded-xl px-3.5 py-2.5 flex items-center justify-between text-xs"
                 >
-                  <span className="font-semibold text-zinc-800">
-                    Parcela {p.numero_da_parcela}/{parcelasCount}
+                  <span className="font-semibold text-[#1C1C1E]">
+                    Parcela {p.numero_da_parcela} de {parcelasCount}
                   </span>
                   <div className="flex items-center gap-3">
-                    <span className="text-zinc-500">
-                      Vence em {formatDateBR(p.data_vencimento)}
+                    <span className="text-[#8E8E93]">
+                      {formatDateBR(p.data_vencimento)}
                     </span>
-                    <span className="font-bold text-zinc-950 font-serif">
+                    <span className="font-bold text-[#1C1C1E]">
                       {p.valor_parcela.toLocaleString('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',
@@ -307,13 +295,13 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
           </div>
         )}
 
-        {/* BOTÃO SALVAR VENDA */}
+        {/* BOTÃO CONCLUIR */}
         <button
           type="submit"
-          className="tap-target w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 text-white font-bold text-sm shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
+          className="tap-target w-full py-4 rounded-[18px] bg-rose-600 hover:bg-rose-700 active:scale-98 text-white font-bold text-sm shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2"
         >
-          <ShoppingBag className="w-4 h-4" />
-          <span>Confirmar Venda e Gerar Parcelas</span>
+          <Check className="w-5 h-5 stroke-[2.5]" />
+          <span>Salvar Venda</span>
         </button>
       </form>
     </div>
