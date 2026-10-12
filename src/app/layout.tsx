@@ -14,10 +14,18 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Mary Kay Manager | Gestão e Cobrança",
+  title: "Caderno Rosa | Gestão Mary Kay",
   description: "Web app mobile-first para consultoras Mary Kay gerenciarem clientes, vendas parceladas e cobranças via WhatsApp.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Caderno Rosa",
+  },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/apple-touch-icon.png",
   },
 };
 
