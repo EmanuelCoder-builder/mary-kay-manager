@@ -1,0 +1,40 @@
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'Caderno Rosa - Gestão Mary Kay',
+    short_name: 'Caderno Rosa',
+    description: 'Aplicativo de gestão de clientes, vendas parceladas e cobranças Mary Kay.',
+    start_url: '/',
+    id: '/',
+    display: 'standalone',
+    background_color: '#F2F2F7',
+    theme_color: '#F2F2F7',
+    icons: [
+      {
+        src: '/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+        purpose: 'any',
+      },
+    ],
+  };
+}

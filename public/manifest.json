@@ -1,7 +1,7 @@
 {
-  "name": "Caderno Rosa - Gestão Mary Kay",
+  "name": "Caderno Rosa - Gestao Mary Kay",
   "short_name": "Caderno Rosa",
-  "description": "Aplicativo de gestão de clientes, vendas parceladas e cobranças Mary Kay.",
+  "description": "Aplicativo de gestao de clientes, vendas parceladas e cobrancas Mary Kay.",
   "start_url": "/",
   "id": "/",
   "display": "standalone",
