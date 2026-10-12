@@ -69,16 +69,16 @@ CREATE POLICY "Usuário autenticado pode gerenciar seus clientes"
 ON public.cliente
 FOR ALL
 TO authenticated
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id)
+WITH CHECK ((select auth.uid()) = user_id);
 
 -- Políticas para VENDA
 CREATE POLICY "Usuário autenticado pode gerenciar suas vendas"
 ON public.venda
 FOR ALL
 TO authenticated
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id)
+WITH CHECK ((select auth.uid()) = user_id);
 
 -- Políticas para PARCELA (vinculada à venda do usuário)
 CREATE POLICY "Usuário autenticado pode gerenciar parcelas de suas vendas"
@@ -89,21 +89,22 @@ USING (
     EXISTS (
         SELECT 1 FROM public.venda
         WHERE public.venda.id_venda = public.parcela.id_venda
-        AND public.venda.user_id = auth.uid()
+        AND public.venda.user_id = (select auth.uid())
     )
 )
 WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.venda
         WHERE public.venda.id_venda = public.parcela.id_venda
-        AND public.venda.user_id = auth.uid()
+        AND public.venda.user_id = (select auth.uid())
     )
 );
 
 -- ------------------------------------------------------------------------------
 -- 5. VIEW CONVENIENTE: COBRANÇAS COM DADOS DA CLIENTE
 -- ------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.vw_cobrancas AS
+CREATE OR REPLACE VIEW public.vw_cobrancas 
+WITH (security_invoker = true) AS
 SELECT 
     p.id_parcela,
     p.numero_da_parcela,
