@@ -4,12 +4,10 @@ import React, { useState, useMemo } from 'react';
 import { 
   Search, 
   Plus, 
-  Phone, 
   MessageCircle, 
   Edit2, 
   Trash2, 
   X, 
-  Check, 
   Users
 } from 'lucide-react';
 import { Cliente, Venda } from '@/types/database';

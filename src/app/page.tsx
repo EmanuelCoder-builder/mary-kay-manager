@@ -45,7 +45,7 @@ import {
 } from '@/lib/supabase/service';
 import { getTodayRecife, formatDateBR, getCurrentMonthRangeRecife, normalizeDateISO } from '@/lib/date-utils';
 import { CalculatedInstallment } from '@/lib/calculations';
-import { Check, AlertCircle } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 
 export default function Home() {
@@ -104,14 +104,13 @@ export default function Home() {
     }
   }, [loadLocalData, showToast]);
 
-  // Inicialização de Auth e Datas
+  // Inicialização de Auth e Datas no cliente
   useEffect(() => {
-    const todayStr = getTodayRecife();
-    setToday(todayStr);
-    setTodayFormatted(formatDateBR(todayStr));
-    setMonthRange(getCurrentMonthRangeRecife());
-
     async function initAuth() {
+      const todayStr = getTodayRecife();
+      setToday(todayStr);
+      setTodayFormatted(formatDateBR(todayStr));
+      setMonthRange(getCurrentMonthRangeRecife());
       try {
         const session = await getCurrentSession();
         if (session?.user) {

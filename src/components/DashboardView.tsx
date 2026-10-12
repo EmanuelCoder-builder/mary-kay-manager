@@ -4,10 +4,8 @@ import React, { useMemo } from 'react';
 import { 
   MessageCircle, 
   Check, 
-  Clock, 
   ShieldCheck, 
-  ChevronRight,
-  Plus,
+  Plus, 
   Users
 } from 'lucide-react';
 import { CobrancaComCliente } from '@/types/database';

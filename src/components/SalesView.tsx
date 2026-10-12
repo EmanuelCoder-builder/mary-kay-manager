@@ -3,17 +3,13 @@
 import React, { useState, useMemo } from 'react';
 import { 
   ReceiptText, 
-  Check, 
   MessageCircle, 
   ChevronDown, 
   ChevronUp, 
   Trash2,
   Edit2,
   X,
-  Calendar,
-  Save,
-  Clock,
-  CheckCircle2
+  Save
 } from 'lucide-react';
 import { Venda, Parcela, Cliente } from '@/types/database';
 import { formatDateBR, normalizeDateISO } from '@/lib/date-utils';

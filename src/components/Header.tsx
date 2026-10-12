@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Settings, Cloud, CloudOff } from 'lucide-react';
+import { Settings, CloudOff } from 'lucide-react';
 
 interface HeaderProps {
   consultantName: string;

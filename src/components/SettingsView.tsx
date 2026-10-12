@@ -2,11 +2,8 @@
 
 import React, { useState } from 'react';
 import { 
-  Key, 
-  User as UserIcon, 
   RotateCcw, 
   Check, 
-  Cloud,
   CloudOff,
   LogOut,
   LogIn
@@ -27,7 +24,6 @@ interface SettingsViewProps {
 export const SettingsView: React.FC<SettingsViewProps> = ({
   settings,
   user,
-  isDemoMode,
   onSaveSettings,
   onResetData,
   onSignOut,

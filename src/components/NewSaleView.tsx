@@ -1,13 +1,9 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  ShoppingBag, 
-  Calendar, 
   UserPlus, 
   Check, 
-  Clock, 
-  Sparkles,
   CalendarDays
 } from 'lucide-react';
 import { Cliente } from '@/types/database';
@@ -52,21 +48,13 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
   const [descricao, setDescricao] = useState('');
   const [valorTotalStr, setValorTotalStr] = useState('');
   const [parcelasCount, setParcelasCount] = useState<number>(1);
-  const [dataVenda, setDataVenda] = useState(today || '');
+  const [dataVenda, setDataVenda] = useState('');
   
   // Data combinada para o primeiro pagamento / cobrança da cliente
-  const [primeiroVencimento, setPrimeiroVencimento] = useState(today || '');
-  
-  // Sincroniza quando today estiver disponível após montagem
-  useEffect(() => {
-    if (today) {
-      setDataVenda((prev) => prev || normalizeDateISO(today));
-      setPrimeiroVencimento((prev) => prev || normalizeDateISO(today));
-    }
-  }, [today]);
+  const [primeiroVencimento, setPrimeiroVencimento] = useState('');
 
-  // Parcelas customizáveis individualmente se a mãe desejar
-  const [customInstallments, setCustomInstallments] = useState<CalculatedInstallment[]>([]);
+  // Datas manuais editadas por parcela individual
+  const [manualInstallmentDates, setManualInstallmentDates] = useState<Record<number, string>>({});
   const [formError, setFormError] = useState('');
 
   // Próxima sexta-feira calculada a partir de hoje
@@ -77,31 +65,30 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
   // Recalcula parcelas base sempre que valor, número de parcelas ou data do 1º vencimento mudam
   const numericTotal = parseFloat(valorTotalStr.replace(',', '.')) || 0;
 
-  useEffect(() => {
-    if (numericTotal > 0) {
-      try {
-        const calcs = calculateInstallments(
-          numericTotal, 
-          parcelasCount, 
-          primeiroVencimento || dataVenda || today, 
-          dataVenda
-        );
-        setCustomInstallments(calcs);
-      } catch {
-        setCustomInstallments([]);
-      }
-    } else {
-      setCustomInstallments([]);
+  const customInstallments: CalculatedInstallment[] = useMemo(() => {
+    if (numericTotal <= 0) return [];
+    try {
+      const base = calculateInstallments(
+        numericTotal, 
+        parcelasCount, 
+        primeiroVencimento || today, 
+        dataVenda || today
+      );
+      return base.map((p, idx) => ({
+        ...p,
+        data_vencimento: manualInstallmentDates[idx] || p.data_vencimento,
+      }));
+    } catch {
+      return [];
     }
-  }, [numericTotal, parcelasCount, primeiroVencimento, dataVenda, today]);
+  }, [numericTotal, parcelasCount, primeiroVencimento, dataVenda, today, manualInstallmentDates]);
 
   // Permite à mãe editar individualmente a data de qualquer parcela
   const handleUpdateSingleInstallmentDate = (index: number, newDate: string) => {
-    setCustomInstallments((prev) => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], data_vencimento: newDate };
-      return copy;
-    });
+    setManualInstallmentDates((prev) => ({
+      ...prev,
+      [index]: newDate,
+    }));
   };
 
   const handleAddChip = (prod: string) => {
@@ -141,7 +128,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
       descricao.trim(),
       numericTotal,
       parcelasCount,
-      normalizeDateISO(dataVenda),
+      normalizeDateISO(dataVenda || today),
       normalizedInstallments
     );
 
@@ -279,7 +266,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
               </label>
               <input
                 type="date"
-                value={dataVenda}
+                value={dataVenda || today}
                 onChange={(e) => setDataVenda(e.target.value)}
                 className="w-full px-3 py-3 rounded-xl bg-[#F2F2F7] text-xs font-semibold text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
                 required
@@ -385,7 +372,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
             </label>
             <input
               type="date"
-              value={primeiroVencimento}
+              value={primeiroVencimento || today}
               onChange={(e) => setPrimeiroVencimento(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-sm font-semibold text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
               required
