@@ -28,7 +28,7 @@ import {
   getInitialSeedData,
   DEFAULT_SETTINGS
 } from '@/lib/store';
-import { getTodayRecife, formatDateBR, getCurrentMonthRangeRecife } from '@/lib/date-utils';
+import { getTodayRecife, formatDateBR, getCurrentMonthRangeRecife, normalizeDateISO } from '@/lib/date-utils';
 import { CalculatedInstallment } from '@/lib/calculations';
 import { Check } from 'lucide-react';
 
@@ -182,9 +182,9 @@ export default function Home() {
       id_cliente,
       descricao_produtos,
       valor_total,
-      data_venda,
+      data_venda: normalizeDateISO(data_venda),
       total_de_parcelas,
-      created_at: data_venda,
+      created_at: normalizeDateISO(data_venda),
     };
 
     const newInstallmentsList: Parcela[] = calculatedInstallments.map((calc, idx) => ({
@@ -192,10 +192,10 @@ export default function Home() {
       id_venda: saleId,
       numero_da_parcela: calc.numero_da_parcela,
       valor_parcela: calc.valor_parcela,
-      data_vencimento: calc.data_vencimento,
+      data_vencimento: normalizeDateISO(calc.data_vencimento),
       status_pago: false,
       data_pagamento: null,
-      created_at: data_venda,
+      created_at: normalizeDateISO(data_venda),
     }));
 
     const updatedSales = [newSale, ...sales];
@@ -207,7 +207,38 @@ export default function Home() {
     saveStoredSales(updatedSales);
     saveStoredInstallments(updatedInstallments);
 
-    showToast('Venda registrada e parcelas geradas!');
+    showToast('Venda registrada com sucesso!');
+  };
+
+  const handleUpdateSale = (updatedSale: Venda, updatedInstallments: Parcela[]) => {
+    // Normaliza datas
+    const normalizedSale: Venda = {
+      ...updatedSale,
+      data_venda: normalizeDateISO(updatedSale.data_venda),
+    };
+
+    const normalizedInstallments: Parcela[] = updatedInstallments.map((p) => ({
+      ...p,
+      data_vencimento: normalizeDateISO(p.data_vencimento),
+      data_pagamento: p.data_pagamento ? normalizeDateISO(p.data_pagamento) : null,
+    }));
+
+    const updatedSales = sales.map((s) =>
+      s.id_venda === normalizedSale.id_venda ? normalizedSale : s
+    );
+
+    const otherInstallments = installments.filter(
+      (p) => p.id_venda !== normalizedSale.id_venda
+    );
+    const allUpdatedInstallments = [...normalizedInstallments, ...otherInstallments];
+
+    setSales(updatedSales);
+    setInstallments(allUpdatedInstallments);
+
+    saveStoredSales(updatedSales);
+    saveStoredInstallments(allUpdatedInstallments);
+
+    showToast('Venda atualizada com sucesso!');
   };
 
   const handleDeleteSale = (id_venda: string) => {
@@ -324,6 +355,7 @@ export default function Home() {
               settings={settings}
               onMarkPaid={handleMarkPaid}
               onDeleteSale={handleDeleteSale}
+              onUpdateSale={handleUpdateSale}
             />
           )}
 

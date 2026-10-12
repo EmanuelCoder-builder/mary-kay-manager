@@ -11,7 +11,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { Cliente } from '@/types/database';
-import { formatDateBR, getNextFriday, addDaysToDate } from '@/lib/date-utils';
+import { formatDateBR, getNextFriday, addDaysToDate, normalizeDateISO } from '@/lib/date-utils';
 import { calculateInstallments, CalculatedInstallment } from '@/lib/calculations';
 
 interface NewSaleViewProps {
@@ -57,6 +57,14 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
   // Data combinada para o primeiro pagamento / cobrança da cliente
   const [primeiroVencimento, setPrimeiroVencimento] = useState(today || '');
   
+  // Sincroniza quando today estiver disponível após montagem
+  useEffect(() => {
+    if (today) {
+      setDataVenda((prev) => prev || normalizeDateISO(today));
+      setPrimeiroVencimento((prev) => prev || normalizeDateISO(today));
+    }
+  }, [today]);
+
   // Parcelas customizáveis individualmente se a mãe desejar
   const [customInstallments, setCustomInstallments] = useState<CalculatedInstallment[]>([]);
   const [formError, setFormError] = useState('');
@@ -123,13 +131,18 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({
       return;
     }
 
+    const normalizedInstallments = customInstallments.map((p) => ({
+      ...p,
+      data_vencimento: normalizeDateISO(p.data_vencimento),
+    }));
+
     onAddSale(
       selectedClientId,
       descricao.trim(),
       numericTotal,
       parcelasCount,
-      dataVenda,
-      customInstallments
+      normalizeDateISO(dataVenda),
+      normalizedInstallments
     );
 
     setDescricao('');

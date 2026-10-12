@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { CobrancaComCliente } from '@/types/database';
 import { ConsultantSettings } from '@/lib/store';
-import { formatDateBR } from '@/lib/date-utils';
+import { formatDateBR, normalizeDateISO } from '@/lib/date-utils';
 import { generateWhatsAppChargeLink } from '@/lib/whatsapp';
 
 interface DashboardViewProps {
@@ -34,32 +34,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onMarkPaid,
   onNavigateToTab,
 }) => {
+  const todayNorm = normalizeDateISO(today);
+
   // 1. Cobranças do Dia (RF06): vencimento == today e status_pago == false
   const cobrancasHoje = useMemo(() => {
-    if (!today) return [];
-    return charges.filter((c) => c.data_vencimento === today && !c.status_pago);
-  }, [charges, today]);
+    if (!todayNorm) return [];
+    return charges.filter(
+      (c) => normalizeDateISO(c.data_vencimento) === todayNorm && !c.status_pago
+    );
+  }, [charges, todayNorm]);
 
-  // 2. Cobranças Atrasadas
+  // 2. Cobranças Atrasadas: vencimento estritamente anterior a hoje e pendente
   const cobrancasAtrasadas = useMemo(() => {
-    if (!today) return [];
-    return charges.filter((c) => c.data_vencimento < today && !c.status_pago);
-  }, [charges, today]);
+    if (!todayNorm) return [];
+    return charges.filter(
+      (c) => normalizeDateISO(c.data_vencimento) < todayNorm && !c.status_pago
+    );
+  }, [charges, todayNorm]);
 
   // 3. Métricas do Mês (RF05)
   const metricasMes = useMemo(() => {
     let totalAReceberMes = 0;
     let totalRecebidoMes = 0;
+    const startNorm = normalizeDateISO(startOfMonth);
+    const endNorm = normalizeDateISO(endOfMonth);
 
     charges.forEach((c) => {
-      if (c.data_vencimento >= startOfMonth && c.data_vencimento <= endOfMonth) {
+      const vencNorm = normalizeDateISO(c.data_vencimento);
+      if (vencNorm >= startNorm && vencNorm <= endNorm) {
         if (!c.status_pago) {
           totalAReceberMes += c.valor_parcela;
         }
       }
       if (c.status_pago) {
-        const dataPag = c.data_pagamento || c.data_vencimento;
-        if (dataPag >= startOfMonth && dataPag <= endOfMonth) {
+        const dataPag = normalizeDateISO(c.data_pagamento || c.data_vencimento);
+        if (dataPag >= startNorm && dataPag <= endNorm) {
           totalRecebidoMes += c.valor_parcela;
         }
       }

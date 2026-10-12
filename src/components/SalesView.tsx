@@ -7,10 +7,16 @@ import {
   MessageCircle, 
   ChevronDown, 
   ChevronUp, 
-  Trash2
+  Trash2,
+  Edit2,
+  X,
+  Calendar,
+  Save,
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
 import { Venda, Parcela, Cliente } from '@/types/database';
-import { formatDateBR } from '@/lib/date-utils';
+import { formatDateBR, normalizeDateISO } from '@/lib/date-utils';
 import { generateWhatsAppChargeLink } from '@/lib/whatsapp';
 import { ConsultantSettings } from '@/lib/store';
 
@@ -21,6 +27,7 @@ interface SalesViewProps {
   settings: ConsultantSettings;
   onMarkPaid: (id_parcela: string, newStatus: boolean) => void;
   onDeleteSale: (id_venda: string) => void;
+  onUpdateSale: (updatedSale: Venda, updatedInstallments: Parcela[]) => void;
 }
 
 export const SalesView: React.FC<SalesViewProps> = ({
@@ -30,9 +37,19 @@ export const SalesView: React.FC<SalesViewProps> = ({
   settings,
   onMarkPaid,
   onDeleteSale,
+  onUpdateSale,
 }) => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid'>('all');
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
+
+  // Estados do Modal de Edição da Venda
+  const [editingSale, setEditingSale] = useState<Venda | null>(null);
+  const [editClientId, setEditClientId] = useState('');
+  const [editDescricao, setEditDescricao] = useState('');
+  const [editDataVenda, setEditDataVenda] = useState('');
+  const [editValorTotalStr, setEditValorTotalStr] = useState('');
+  const [editInstallments, setEditInstallments] = useState<Parcela[]>([]);
+  const [editError, setEditError] = useState('');
 
   const clientMap = useMemo(() => {
     const map = new Map<string, Cliente>();
@@ -64,6 +81,79 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
   const toggleExpand = (id_venda: string) => {
     setExpandedSaleId((prev) => (prev === id_venda ? null : id_venda));
+  };
+
+  const handleOpenEditModal = (sale: Venda) => {
+    const saleInsts = (installmentsBySale.get(sale.id_venda) || [])
+      .map((p) => ({ ...p }))
+      .sort((a, b) => a.numero_da_parcela - b.numero_da_parcela);
+
+    setEditingSale(sale);
+    setEditClientId(sale.id_cliente);
+    setEditDescricao(sale.descricao_produtos);
+    setEditDataVenda(normalizeDateISO(sale.data_venda));
+    setEditValorTotalStr(String(sale.valor_total));
+    setEditInstallments(saleInsts);
+    setEditError('');
+  };
+
+  const handleUpdateInstallmentDate = (index: number, newDate: string) => {
+    setEditInstallments((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], data_vencimento: normalizeDateISO(newDate) };
+      return copy;
+    });
+  };
+
+  const handleUpdateInstallmentValue = (index: number, newVal: string) => {
+    const numeric = parseFloat(newVal.replace(',', '.')) || 0;
+    setEditInstallments((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], valor_parcela: numeric };
+      return copy;
+    });
+  };
+
+  const handleToggleInstallmentPaid = (index: number) => {
+    setEditInstallments((prev) => {
+      const copy = [...prev];
+      const current = copy[index].status_pago;
+      copy[index] = {
+        ...copy[index],
+        status_pago: !current,
+        data_pagamento: !current ? normalizeDateISO(editDataVenda) : null,
+      };
+      return copy;
+    });
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSale) return;
+    if (!editClientId) {
+      setEditError('Selecione uma cliente.');
+      return;
+    }
+    if (!editDescricao.trim()) {
+      setEditError('Informe os produtos vendidos.');
+      return;
+    }
+    const numTotal = parseFloat(editValorTotalStr.replace(',', '.')) || 0;
+    if (numTotal <= 0) {
+      setEditError('O valor total deve ser maior que zero.');
+      return;
+    }
+
+    const updatedSale: Venda = {
+      ...editingSale,
+      id_cliente: editClientId,
+      descricao_produtos: editDescricao.trim(),
+      data_venda: normalizeDateISO(editDataVenda),
+      valor_total: numTotal,
+    };
+
+    onUpdateSale(updatedSale, editInstallments);
+    setEditingSale(null);
   };
 
   const formatCurrency = (val: number) => {
@@ -191,22 +281,34 @@ export const SalesView: React.FC<SalesViewProps> = ({
                   <div className="px-4 pb-4 pt-2 bg-[#F2F2F7]/50 border-t border-[#E5E5EA]/60 space-y-2">
                     <div className="flex items-center justify-between text-[11px] font-bold text-[#8E8E93] uppercase tracking-wider">
                       <span>Parcelas</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (
-                            window.confirm(
-                              'Deseja excluir esta venda e todas as parcelas?'
-                            )
-                          ) {
-                            onDeleteSale(sale.id_venda);
-                          }
-                        }}
-                        className="text-rose-600 hover:text-rose-700 flex items-center gap-1 normal-case"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Apagar Venda</span>
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditModal(sale);
+                          }}
+                          className="text-rose-600 hover:text-rose-700 flex items-center gap-1 normal-case font-semibold"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>Editar Venda</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              window.confirm(
+                                'Deseja excluir esta venda e todas as parcelas?'
+                              )
+                            ) {
+                              onDeleteSale(sale.id_venda);
+                            }
+                          }}
+                          className="text-[#8E8E93] hover:text-rose-600 flex items-center gap-1 normal-case"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Apagar</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
@@ -287,6 +389,185 @@ export const SalesView: React.FC<SalesViewProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* MODAL SHEET ESTILO IOS PARA EDITAR VENDA COMPLETA */}
+      {editingSale && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-[28px] p-6 shadow-2xl space-y-4 border border-[#E5E5EA] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F2F2F7]">
+              <div>
+                <h3 className="text-base font-bold text-[#1C1C1E]">
+                  Editar Venda
+                </h3>
+                <p className="text-xs text-[#8E8E93]">
+                  Ajuste os dados ou as datas de vencimento
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingSale(null)}
+                className="tap-target w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#8E8E93] hover:text-[#1C1C1E]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-xs text-rose-700">
+                {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEdit} className="space-y-3.5">
+              {/* Cliente */}
+              <div>
+                <label className="block text-xs font-semibold text-[#8E8E93] uppercase tracking-wider mb-1">
+                  Cliente
+                </label>
+                <select
+                  value={editClientId}
+                  onChange={(e) => setEditClientId(e.target.value)}
+                  className="w-full px-3.5 py-3 rounded-xl bg-[#F2F2F7] text-sm font-semibold text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
+                  required
+                >
+                  {clients.map((c) => (
+                    <option key={c.id_cliente} value={c.id_cliente}>
+                      {c.nome} ({c.telefone})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Descrição */}
+              <div>
+                <label className="block text-xs font-semibold text-[#8E8E93] uppercase tracking-wider mb-1">
+                  Produtos
+                </label>
+                <input
+                  type="text"
+                  value={editDescricao}
+                  onChange={(e) => setEditDescricao(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-sm text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
+                  required
+                />
+              </div>
+
+              {/* Valor Total e Data da Venda */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#8E8E93] uppercase tracking-wider mb-1">
+                    Valor Total (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editValorTotalStr}
+                    onChange={(e) => setEditValorTotalStr(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-sm font-bold text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#8E8E93] uppercase tracking-wider mb-1">
+                    Data da Venda
+                  </label>
+                  <input
+                    type="date"
+                    value={editDataVenda}
+                    onChange={(e) => setEditDataVenda(e.target.value)}
+                    className="w-full px-3 py-3 rounded-xl bg-[#F2F2F7] text-xs font-semibold text-[#1C1C1E] focus:outline-none focus:bg-white border border-transparent focus:border-rose-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Edição Detalhada das Parcelas */}
+              <div className="space-y-2 pt-2 border-t border-[#F2F2F7]">
+                <label className="block text-xs font-bold text-[#1C1C1E] uppercase tracking-wider">
+                  Datas e Valores das Parcelas
+                </label>
+                <div className="space-y-2">
+                  {editInstallments.map((p, idx) => (
+                    <div
+                      key={p.id_parcela}
+                      className="bg-[#F2F2F7]/70 rounded-xl p-3 border border-[#E5E5EA]/80 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#1C1C1E]">
+                          Parcela {p.numero_da_parcela}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleInstallmentPaid(idx)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                            p.status_pago
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {p.status_pago ? '✓ Paga' : '⏳ Pendente'}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[10px] text-[#8E8E93] block mb-0.5">
+                            Data de Vencimento:
+                          </span>
+                          <input
+                            type="date"
+                            value={normalizeDateISO(p.data_vencimento)}
+                            onChange={(e) =>
+                              handleUpdateInstallmentDate(idx, e.target.value)
+                            }
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-[#D1D1D6] text-xs font-semibold text-[#1C1C1E] focus:outline-none focus:border-rose-500"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] text-[#8E8E93] block mb-0.5">
+                            Valor (R$):
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={p.valor_parcela}
+                            onChange={(e) =>
+                              handleUpdateInstallmentValue(idx, e.target.value)
+                            }
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-[#D1D1D6] text-xs font-semibold text-[#1C1C1E] focus:outline-none focus:border-rose-500"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div className="flex items-center gap-2 pt-3 border-t border-[#F2F2F7]">
+                <button
+                  type="button"
+                  onClick={() => setEditingSale(null)}
+                  className="tap-target flex-1 py-3 rounded-xl bg-[#F2F2F7] text-[#1C1C1E] text-xs font-semibold hover:bg-[#E5E5EA]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="tap-target flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-transform flex items-center justify-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
