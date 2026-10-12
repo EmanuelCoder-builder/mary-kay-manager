@@ -8,6 +8,7 @@ import { ClientsView } from '@/components/ClientsView';
 import { NewSaleView } from '@/components/NewSaleView';
 import { SalesView } from '@/components/SalesView';
 import { SettingsView } from '@/components/SettingsView';
+import { AuthView } from '@/components/AuthView';
 import { 
   Cliente, 
   Venda, 
@@ -28,13 +29,35 @@ import {
   getInitialSeedData,
   DEFAULT_SETTINGS
 } from '@/lib/store';
+import { 
+  getSupabase, 
+  getCurrentSession, 
+  signOut as supabaseSignOut,
+  fetchUserData,
+  createClientCloud,
+  updateClientCloud,
+  deleteClientCloud,
+  createSaleCloud,
+  updateSaleCloud,
+  deleteSaleCloud,
+  updateInstallmentPaidStatusCloud,
+  generateUUID
+} from '@/lib/supabase/service';
 import { getTodayRecife, formatDateBR, getCurrentMonthRangeRecife, normalizeDateISO } from '@/lib/date-utils';
 import { CalculatedInstallment } from '@/lib/calculations';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
+import { User } from '@supabase/supabase-js';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  
+  // Auth state
+  const [user, setUser] = useState<User | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+
+  // Data state
   const [clients, setClients] = useState<Cliente[]>([]);
   const [sales, setSales] = useState<Venda[]>([]);
   const [installments, setInstallments] = useState<Parcela[]>([]);
@@ -48,27 +71,120 @@ export default function Home() {
     endOfMonth: '',
   });
 
-  // Inicializa o Store local e datas no mount
-  useEffect(() => {
-    initializeStore();
-    const todayStr = getTodayRecife();
-    setToday(todayStr);
-    setTodayFormatted(formatDateBR(todayStr));
-    setMonthRange(getCurrentMonthRangeRecife());
-
-    setClients(getStoredClients());
-    setSales(getStoredSales());
-    setInstallments(getStoredInstallments());
-    setSettings(getStoredSettings());
-    setMounted(true);
-  }, []);
-
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   }, []);
 
-  // União unificada de cobranças
+  // Carrega dados locais (modo demonstração/cache)
+  const loadLocalData = useCallback(() => {
+    initializeStore();
+    setClients(getStoredClients());
+    setSales(getStoredSales());
+    setInstallments(getStoredInstallments());
+    setSettings(getStoredSettings());
+  }, []);
+
+  // Carrega dados da nuvem Supabase
+  const loadCloudData = useCallback(async (userId: string) => {
+    try {
+      const data = await fetchUserData(userId);
+      setClients(data.clients);
+      setSales(data.sales);
+      setInstallments(data.installments);
+      
+      // Carrega ajustes locais ou iniciais
+      const savedSettings = getStoredSettings();
+      setSettings(savedSettings);
+    } catch (err) {
+      console.error('Falha ao carregar dados do Supabase:', err);
+      // Fallback para cache local se offline
+      loadLocalData();
+      showToast('Modo offline: usando dados salvos no aparelho.');
+    }
+  }, [loadLocalData, showToast]);
+
+  // Inicialização de Auth e Datas
+  useEffect(() => {
+    const todayStr = getTodayRecife();
+    setToday(todayStr);
+    setTodayFormatted(formatDateBR(todayStr));
+    setMonthRange(getCurrentMonthRangeRecife());
+
+    async function initAuth() {
+      try {
+        const session = await getCurrentSession();
+        if (session?.user) {
+          setUser(session.user);
+          setIsDemoMode(false);
+          await loadCloudData(session.user.id);
+        } else {
+          // Se não há sessão, verifica se o usuário marcou para ficar em modo demo
+          const savedDemo = localStorage.getItem('mk_demo_mode');
+          if (savedDemo === 'true') {
+            setIsDemoMode(true);
+            loadLocalData();
+          }
+        }
+      } catch (e) {
+        console.error('Erro na checagem de sessão:', e);
+        loadLocalData();
+      } finally {
+        setIsCheckingAuth(false);
+        setMounted(true);
+      }
+    }
+
+    initAuth();
+
+    // Listener de mudanças na autenticação
+    const supabase = getSupabase();
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        setIsDemoMode(false);
+        localStorage.removeItem('mk_demo_mode');
+        await loadCloudData(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsDemoMode(false);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, [loadCloudData, loadLocalData]);
+
+  // Callbacks de Autenticação
+  const handleAuthSuccess = async (authenticatedUser: User) => {
+    setUser(authenticatedUser);
+    setIsDemoMode(false);
+    localStorage.removeItem('mk_demo_mode');
+    await loadCloudData(authenticatedUser.id);
+    showToast('Login realizado com sucesso! Nuvem conectada.');
+  };
+
+  const handleContinueDemo = () => {
+    setIsDemoMode(true);
+    localStorage.setItem('mk_demo_mode', 'true');
+    loadLocalData();
+    showToast('Modo demonstração ativado.');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await supabaseSignOut();
+      setUser(null);
+      setIsDemoMode(false);
+      localStorage.removeItem('mk_demo_mode');
+      showToast('Sessão encerrada.');
+    } catch (e) {
+      console.error('Erro ao sair:', e);
+    }
+  };
+
+  // União unificada de cobranças para o Dashboard
   const charges: CobrancaComCliente[] = useMemo(() => {
     const clientMap = new Map<string, Cliente>();
     clients.forEach((c) => clientMap.set(c.id_cliente, c));
@@ -104,8 +220,10 @@ export default function Home() {
     return charges.filter((c) => c.data_vencimento === today && !c.status_pago).length;
   }, [charges, today]);
 
+  // ============================================================================
   // AÇÕES: Marcar parcela como paga (RF08)
-  const handleMarkPaid = (id_parcela: string, newStatus: boolean) => {
+  // ============================================================================
+  const handleMarkPaid = async (id_parcela: string, newStatus: boolean) => {
     const todayDate = today || getTodayRecife();
     const updated = installments.map((p) => {
       if (p.id_parcela === id_parcela) {
@@ -121,13 +239,28 @@ export default function Home() {
     setInstallments(updated);
     saveStoredInstallments(updated);
     showToast(newStatus ? 'Pagamento registrado com sucesso!' : 'Parcela marcada como pendente.');
+
+    // Sincroniza com Supabase se logado
+    if (user) {
+      try {
+        await updateInstallmentPaidStatusCloud(
+          id_parcela,
+          newStatus,
+          newStatus ? todayDate : null
+        );
+      } catch (err) {
+        console.error('Erro ao sincronizar parcela no Supabase:', err);
+      }
+    }
   };
 
+  // ============================================================================
   // AÇÕES: Gestão de Clientes (RF02)
-  const handleAddClient = (nome: string, telefone: string) => {
+  // ============================================================================
+  const handleAddClient = async (nome: string, telefone: string) => {
     const todayDate = today || getTodayRecife();
     const newClient: Cliente = {
-      id_cliente: `c_${Date.now()}`,
+      id_cliente: generateUUID(),
       nome,
       telefone,
       data_cadastro: todayDate,
@@ -136,19 +269,34 @@ export default function Home() {
     setClients(updated);
     saveStoredClients(updated);
     showToast('Cliente cadastrada com sucesso!');
+
+    if (user) {
+      try {
+        await createClientCloud(newClient, user.id);
+      } catch (err) {
+        console.error('Erro ao sincronizar cliente no Supabase:', err);
+      }
+    }
   };
 
-  const handleUpdateClient = (id_cliente: string, nome: string, telefone: string) => {
+  const handleUpdateClient = async (id_cliente: string, nome: string, telefone: string) => {
     const updated = clients.map((c) =>
       c.id_cliente === id_cliente ? { ...c, nome, telefone } : c
     );
     setClients(updated);
     saveStoredClients(updated);
     showToast('Cadastro atualizado!');
+
+    if (user) {
+      try {
+        await updateClientCloud(id_cliente, nome, telefone);
+      } catch (err) {
+        console.error('Erro ao atualizar cliente no Supabase:', err);
+      }
+    }
   };
 
-  const handleDeleteClient = (id_cliente: string) => {
-    // Remove cliente, vendas e parcelas vinculadas
+  const handleDeleteClient = async (id_cliente: string) => {
     const updatedClients = clients.filter((c) => c.id_cliente !== id_cliente);
     const salesToRemove = sales.filter((s) => s.id_cliente === id_cliente);
     const saleIdsToRemove = new Set(salesToRemove.map((s) => s.id_venda));
@@ -165,10 +313,20 @@ export default function Home() {
     saveStoredInstallments(updatedInstallments);
 
     showToast('Cliente e histórico removidos.');
+
+    if (user) {
+      try {
+        await deleteClientCloud(id_cliente);
+      } catch (err) {
+        console.error('Erro ao deletar cliente no Supabase:', err);
+      }
+    }
   };
 
+  // ============================================================================
   // AÇÕES: Registro de Venda (RF03, RF04)
-  const handleAddSale = (
+  // ============================================================================
+  const handleAddSale = async (
     id_cliente: string,
     descricao_produtos: string,
     valor_total: number,
@@ -176,7 +334,7 @@ export default function Home() {
     data_venda: string,
     calculatedInstallments: CalculatedInstallment[]
   ) => {
-    const saleId = `v_${Date.now()}`;
+    const saleId = generateUUID();
     const newSale: Venda = {
       id_venda: saleId,
       id_cliente,
@@ -187,8 +345,8 @@ export default function Home() {
       created_at: normalizeDateISO(data_venda),
     };
 
-    const newInstallmentsList: Parcela[] = calculatedInstallments.map((calc, idx) => ({
-      id_parcela: `p_${saleId}_${idx + 1}`,
+    const newInstallmentsList: Parcela[] = calculatedInstallments.map((calc) => ({
+      id_parcela: generateUUID(),
       id_venda: saleId,
       numero_da_parcela: calc.numero_da_parcela,
       valor_parcela: calc.valor_parcela,
@@ -208,10 +366,17 @@ export default function Home() {
     saveStoredInstallments(updatedInstallments);
 
     showToast('Venda registrada com sucesso!');
+
+    if (user) {
+      try {
+        await createSaleCloud(newSale, newInstallmentsList, user.id);
+      } catch (err) {
+        console.error('Erro ao cadastrar venda no Supabase:', err);
+      }
+    }
   };
 
-  const handleUpdateSale = (updatedSale: Venda, updatedInstallments: Parcela[]) => {
-    // Normaliza datas
+  const handleUpdateSale = async (updatedSale: Venda, updatedInstallments: Parcela[]) => {
     const normalizedSale: Venda = {
       ...updatedSale,
       data_venda: normalizeDateISO(updatedSale.data_venda),
@@ -239,9 +404,17 @@ export default function Home() {
     saveStoredInstallments(allUpdatedInstallments);
 
     showToast('Venda atualizada com sucesso!');
+
+    if (user) {
+      try {
+        await updateSaleCloud(normalizedSale, normalizedInstallments);
+      } catch (err) {
+        console.error('Erro ao atualizar venda no Supabase:', err);
+      }
+    }
   };
 
-  const handleDeleteSale = (id_venda: string) => {
+  const handleDeleteSale = async (id_venda: string) => {
     const updatedSales = sales.filter((s) => s.id_venda !== id_venda);
     const updatedInstallments = installments.filter((p) => p.id_venda !== id_venda);
 
@@ -252,9 +425,17 @@ export default function Home() {
     saveStoredInstallments(updatedInstallments);
 
     showToast('Venda removida.');
+
+    if (user) {
+      try {
+        await deleteSaleCloud(id_venda);
+      } catch (err) {
+        console.error('Erro ao deletar venda no Supabase:', err);
+      }
+    }
   };
 
-  // AÇÕES: Configurações
+  // Configurações
   const handleSaveSettings = (newSettings: ConsultantSettings) => {
     setSettings(newSettings);
     saveStoredSettings(newSettings);
@@ -277,18 +458,29 @@ export default function Home() {
     setActiveTab('dashboard');
   };
 
-  if (!mounted) {
+  // Loading inicial
+  if (!mounted || isCheckingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7]">
         <div className="text-center space-y-2">
-          <span className="font-serif tracking-[0.2em] text-lg font-bold text-[#1C1C1E] block">
+          <span className="font-serif tracking-[0.25em] text-xl font-bold text-[#1C1C1E] block">
             MARY KAY
           </span>
           <span className="text-xs text-rose-600 animate-pulse font-medium">
-            Carregando...
+            Carregando aplicativo...
           </span>
         </div>
       </div>
+    );
+  }
+
+  // Se não está logado e não optou por demonstração, exibe tela de login/cadastro
+  if (!user && !isDemoMode) {
+    return (
+      <AuthView
+        onAuthSuccess={handleAuthSuccess}
+        onContinueDemo={handleContinueDemo}
+      />
     );
   }
 
@@ -300,6 +492,7 @@ export default function Home() {
         <Header
           consultantName={settings.nome}
           todayFormatted={todayFormatted}
+          isCloudSynced={!!user}
           onOpenSettings={() => setActiveTab('settings')}
         />
 
@@ -362,8 +555,15 @@ export default function Home() {
           {activeTab === 'settings' && (
             <SettingsView
               settings={settings}
+              user={user}
+              isDemoMode={isDemoMode}
               onSaveSettings={handleSaveSettings}
               onResetData={handleResetData}
+              onSignOut={handleSignOut}
+              onOpenAuth={() => {
+                setIsDemoMode(false);
+                localStorage.removeItem('mk_demo_mode');
+              }}
             />
           )}
         </main>

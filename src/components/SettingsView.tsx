@@ -3,24 +3,35 @@
 import React, { useState } from 'react';
 import { 
   Key, 
-  User, 
+  User as UserIcon, 
   RotateCcw, 
   Check, 
-  MessageCircle,
-  Database
+  Cloud,
+  CloudOff,
+  LogOut,
+  LogIn
 } from 'lucide-react';
 import { ConsultantSettings } from '@/lib/store';
+import { User } from '@supabase/supabase-js';
 
 interface SettingsViewProps {
   settings: ConsultantSettings;
+  user: User | null;
+  isDemoMode: boolean;
   onSaveSettings: (settings: ConsultantSettings) => void;
   onResetData: () => void;
+  onSignOut: () => void;
+  onOpenAuth: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   settings,
+  user,
+  isDemoMode,
   onSaveSettings,
   onResetData,
+  onSignOut,
+  onOpenAuth,
 }) => {
   const [nome, setNome] = useState(settings.nome);
   const [chavePix, setChavePix] = useState(settings.chavePix);
@@ -44,7 +55,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           Ajustes
         </h2>
         <p className="text-xs text-[#8E8E93]">
-          Seus dados e chave Pix para cobrança
+          Conta, dados de cobrança e sincronização
         </p>
       </div>
 
@@ -54,6 +65,64 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <span>Configurações salvas com sucesso!</span>
         </div>
       )}
+
+      {/* SEÇÃO DA CONTA / NUVEM SUPABASE */}
+      <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-3">
+        <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block">
+          Status da Conta
+        </span>
+
+        {user ? (
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-bold text-[#1C1C1E]">Sincronizado na Nuvem</span>
+              </div>
+              <p className="text-xs text-[#8E8E93] truncate max-w-[200px]">
+                {user.email}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Deseja realmente sair da sua conta?')) {
+                  onSignOut();
+                }
+              }}
+              className="tap-target px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sair</span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <CloudOff className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-semibold text-[#1C1C1E]">
+                  Modo Demonstração (Local)
+                </span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                Offline
+              </span>
+            </div>
+            <p className="text-xs text-[#8E8E93]">
+              Conecte sua conta para salvar suas clientes e vendas em segurança na nuvem do Supabase.
+            </p>
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="tap-target w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Entrar / Criar Conta</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* FORMULÁRIO ESTILO GROUPED TABLE DO IOS */}
       <form onSubmit={handleSave} className="space-y-3.5">
@@ -125,7 +194,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           Dados de Teste
         </span>
         <p className="text-xs text-[#8E8E93]">
-          Deseja recarregar as clientes e vendas de exemplo originais?
+          Deseja recarregar as clientes e vendas de exemplo originais no dispositivo?
         </p>
         <button
           onClick={() => {
