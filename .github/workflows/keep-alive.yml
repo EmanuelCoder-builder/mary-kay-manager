@@ -1,0 +1,15 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Roda automaticamente a cada 3 dias às 08:00 UTC
+    - cron: '0 8 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping app keep-alive endpoint
+        run: |
+          curl -s -f "https://mary-kay-manager.vercel.app/api/keep-alive" || true
