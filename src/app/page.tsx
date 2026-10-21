@@ -25,6 +25,7 @@ import {
   saveStoredInstallments, 
   getStoredSettings, 
   saveStoredSettings, 
+  clearAllStoredData,
   ConsultantSettings, 
   getInitialSeedData,
   DEFAULT_SETTINGS
@@ -32,6 +33,7 @@ import {
 import { 
   getSupabase, 
   getCurrentSession, 
+  isSupabaseReachable,
   signOut as supabaseSignOut,
   fetchUserData,
   createClientCloud,
@@ -76,7 +78,7 @@ export default function Home() {
     setTimeout(() => setToastMessage(null), 3000);
   }, []);
 
-  // Carrega dados locais (modo demonstração/cache)
+  // Carrega dados locais (instantâneo e sempre disponível)
   const loadLocalData = useCallback(() => {
     initializeStore();
     setClients(getStoredClients());
@@ -85,32 +87,71 @@ export default function Home() {
     setSettings(getStoredSettings());
   }, []);
 
-  // Carrega dados da nuvem Supabase
+  // Carrega e mescla dados da nuvem Supabase sem jamais apagar dados locais
   const loadCloudData = useCallback(async (userId: string) => {
-    try {
-      const data = await fetchUserData(userId);
-      setClients(data.clients);
-      setSales(data.sales);
-      setInstallments(data.installments);
-      
-      // Carrega ajustes locais ou iniciais
-      const savedSettings = getStoredSettings();
-      setSettings(savedSettings);
-    } catch (err) {
-      console.error('Falha ao carregar dados do Supabase:', err);
-      // Fallback para cache local se offline
-      loadLocalData();
-      showToast('Modo offline: usando dados salvos no aparelho.');
+    // 1. Garante dados locais na tela imediatamente (0ms)
+    initializeStore();
+    const localClients = getStoredClients();
+    const localSales = getStoredSales();
+    const localInstallments = getStoredInstallments();
+    const savedSettings = getStoredSettings();
+
+    setClients(localClients);
+    setSales(localSales);
+    setInstallments(localInstallments);
+    setSettings(savedSettings);
+
+    // 2. Se Supabase estiver online e não for conta local padrão, sincroniza e mescla
+    if (
+      userId === '00000000-0000-4000-8000-000000000001' ||
+      !(await isSupabaseReachable())
+    ) {
+      return;
     }
-  }, [loadLocalData, showToast]);
+
+    try {
+      const cloud = await fetchUserData(userId);
+
+      // Mescla clientes (nuvem + locais que ainda não estão na nuvem)
+      const mergedClientsMap = new Map<string, Cliente>();
+      localClients.forEach((c) => mergedClientsMap.set(c.id_cliente, c));
+      cloud.clients.forEach((c) => mergedClientsMap.set(c.id_cliente, c));
+      const mergedClients = Array.from(mergedClientsMap.values());
+
+      // Mescla vendas
+      const mergedSalesMap = new Map<string, Venda>();
+      localSales.forEach((s) => mergedSalesMap.set(s.id_venda, s));
+      cloud.sales.forEach((s) => mergedSalesMap.set(s.id_venda, s));
+      const mergedSales = Array.from(mergedSalesMap.values());
+
+      // Mescla parcelas
+      const mergedInstMap = new Map<string, Parcela>();
+      localInstallments.forEach((p) => mergedInstMap.set(p.id_parcela, p));
+      cloud.installments.forEach((p) => mergedInstMap.set(p.id_parcela, p));
+      const mergedInstallments = Array.from(mergedInstMap.values());
+
+      setClients(mergedClients);
+      setSales(mergedSales);
+      setInstallments(mergedInstallments);
+
+      saveStoredClients(mergedClients);
+      saveStoredSales(mergedSales);
+      saveStoredInstallments(mergedInstallments);
+    } catch {
+      // Silenciosamente mantém os dados locais se o Supabase estiver pausado/offline
+    }
+  }, []);
 
   // Inicialização de Auth e Datas no cliente
   useEffect(() => {
+    let unsubscribeAuth: (() => void) | null = null;
+
     async function initAuth() {
       const todayStr = getTodayRecife();
       setToday(todayStr);
       setTodayFormatted(formatDateBR(todayStr));
       setMonthRange(getCurrentMonthRangeRecife());
+
       try {
         const session = await getCurrentSession();
         if (session?.user) {
@@ -118,15 +159,35 @@ export default function Home() {
           setIsDemoMode(false);
           await loadCloudData(session.user.id);
         } else {
-          // Se não há sessão, verifica se o usuário marcou para ficar em modo demo
           const savedDemo = localStorage.getItem('mk_demo_mode');
           if (savedDemo === 'true') {
             setIsDemoMode(true);
             loadLocalData();
           }
         }
-      } catch (e) {
-        console.error('Erro na checagem de sessão:', e);
+
+        // Só registra listener do Supabase se o servidor estiver online
+        if (await isSupabaseReachable()) {
+          const supabase = getSupabase();
+          const { data: authListener } = supabase.auth.onAuthStateChange(
+            async (event, currentSession) => {
+              if (currentSession?.user) {
+                setUser(currentSession.user);
+                setIsDemoMode(false);
+                localStorage.removeItem('mk_demo_mode');
+                await loadCloudData(currentSession.user.id);
+              } else if (
+                event === 'SIGNED_OUT' &&
+                localStorage.getItem('mk_explicit_logout_v1') === 'true'
+              ) {
+                setUser(null);
+                setIsDemoMode(false);
+              }
+            }
+          );
+          unsubscribeAuth = () => authListener?.subscription?.unsubscribe();
+        }
+      } catch {
         loadLocalData();
       } finally {
         setIsCheckingAuth(false);
@@ -136,22 +197,8 @@ export default function Home() {
 
     initAuth();
 
-    // Listener de mudanças na autenticação
-    const supabase = getSupabase();
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        setIsDemoMode(false);
-        localStorage.removeItem('mk_demo_mode');
-        await loadCloudData(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setIsDemoMode(false);
-      }
-    });
-
     return () => {
-      authListener?.subscription?.unsubscribe();
+      if (unsubscribeAuth) unsubscribeAuth();
     };
   }, [loadCloudData, loadLocalData]);
 
@@ -160,8 +207,17 @@ export default function Home() {
     setUser(authenticatedUser);
     setIsDemoMode(false);
     localStorage.removeItem('mk_demo_mode');
+
+    const metaName = authenticatedUser.user_metadata?.name;
+    if (metaName && typeof metaName === 'string') {
+      const currentSettings = getStoredSettings();
+      const updatedSettings = { ...currentSettings, nome: metaName };
+      setSettings(updatedSettings);
+      saveStoredSettings(updatedSettings);
+    }
+
     await loadCloudData(authenticatedUser.id);
-    showToast('Login realizado com sucesso! Nuvem conectada.');
+    showToast('Acesso liberado com sucesso!');
   };
 
   const handleContinueDemo = () => {
@@ -239,7 +295,6 @@ export default function Home() {
     saveStoredInstallments(updated);
     showToast(newStatus ? 'Pagamento registrado com sucesso!' : 'Parcela marcada como pendente.');
 
-    // Sincroniza com Supabase se logado
     if (user) {
       try {
         await updateInstallmentPaidStatusCloud(
@@ -247,8 +302,8 @@ export default function Home() {
           newStatus,
           newStatus ? todayDate : null
         );
-      } catch (err) {
-        console.error('Erro ao sincronizar parcela no Supabase:', err);
+      } catch {
+        // Mantido no armazenamento local
       }
     }
   };
@@ -272,8 +327,8 @@ export default function Home() {
     if (user) {
       try {
         await createClientCloud(newClient, user.id);
-      } catch (err) {
-        console.error('Erro ao sincronizar cliente no Supabase:', err);
+      } catch {
+        // Mantido no armazenamento local
       }
     }
   };
@@ -289,8 +344,8 @@ export default function Home() {
     if (user) {
       try {
         await updateClientCloud(id_cliente, nome, telefone);
-      } catch (err) {
-        console.error('Erro ao atualizar cliente no Supabase:', err);
+      } catch {
+        // Mantido no armazenamento local
       }
     }
   };
@@ -316,8 +371,8 @@ export default function Home() {
     if (user) {
       try {
         await deleteClientCloud(id_cliente);
-      } catch (err) {
-        console.error('Erro ao deletar cliente no Supabase:', err);
+      } catch {
+        // Mantido no armazenamento local
       }
     }
   };
@@ -369,8 +424,8 @@ export default function Home() {
     if (user) {
       try {
         await createSaleCloud(newSale, newInstallmentsList, user.id);
-      } catch (err) {
-        console.error('Erro ao cadastrar venda no Supabase:', err);
+      } catch {
+        // Mantido no armazenamento local
       }
     }
   };
@@ -407,8 +462,8 @@ export default function Home() {
     if (user) {
       try {
         await updateSaleCloud(normalizedSale, normalizedInstallments);
-      } catch (err) {
-        console.error('Erro ao atualizar venda no Supabase:', err);
+      } catch {
+        // Mantido no armazenamento local
       }
     }
   };
@@ -428,8 +483,8 @@ export default function Home() {
     if (user) {
       try {
         await deleteSaleCloud(id_venda);
-      } catch (err) {
-        console.error('Erro ao deletar venda no Supabase:', err);
+      } catch {
+        // Mantido no armazenamento local
       }
     }
   };
@@ -454,6 +509,15 @@ export default function Home() {
     saveStoredSettings(DEFAULT_SETTINGS);
 
     showToast('Dados de demonstração restaurados!');
+    setActiveTab('dashboard');
+  };
+
+  const handleClearData = () => {
+    clearAllStoredData();
+    setClients([]);
+    setSales([]);
+    setInstallments([]);
+    showToast('Dados limpos! Pronto para cadastrar suas clientes.');
     setActiveTab('dashboard');
   };
 
@@ -558,6 +622,7 @@ export default function Home() {
               isDemoMode={isDemoMode}
               onSaveSettings={handleSaveSettings}
               onResetData={handleResetData}
+              onClearData={handleClearData}
               onSignOut={handleSignOut}
               onOpenAuth={() => {
                 setIsDemoMode(false);

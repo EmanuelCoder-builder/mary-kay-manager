@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { 
   RotateCcw, 
+  Trash2,
   Check, 
   CloudOff,
   LogOut,
@@ -17,6 +18,7 @@ interface SettingsViewProps {
   isDemoMode: boolean;
   onSaveSettings: (settings: ConsultantSettings) => void;
   onResetData: () => void;
+  onClearData?: () => void;
   onSignOut: () => void;
   onOpenAuth: () => void;
 }
@@ -26,6 +28,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   user,
   onSaveSettings,
   onResetData,
+  onClearData,
   onSignOut,
   onOpenAuth,
 }) => {
@@ -73,7 +76,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-[#1C1C1E]">Sincronizado na Nuvem</span>
+                <span className="text-xs font-bold text-[#1C1C1E]">Ativo e Protegido</span>
               </div>
               <p className="text-xs text-[#8E8E93] truncate max-w-[200px]">
                 {user.email}
@@ -102,11 +105,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </span>
               </div>
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                Offline
+                Local
               </span>
             </div>
             <p className="text-xs text-[#8E8E93]">
-              Conecte sua conta para salvar suas clientes e vendas em segurança na nuvem do Supabase.
+              Conecte sua conta para vincular suas clientes e vendas ao seu perfil.
             </p>
             <button
               type="button"
@@ -184,29 +187,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* DADOS DE DEMONSTRAÇÃO */}
-      <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
+      {/* GERENCIAMENTO DE DADOS */}
+      <div className="bg-white rounded-[22px] p-4 border border-[#E5E5EA]/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-3">
         <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block">
-          Dados de Teste
+          Gerenciamento de Dados
         </span>
         <p className="text-xs text-[#8E8E93]">
-          Deseja recarregar as clientes e vendas de exemplo originais no dispositivo?
+          Você pode restaurar os exemplos de teste ou limpar os exemplos para cadastrar apenas suas clientes reais.
         </p>
-        <button
-          onClick={() => {
-            if (
-              window.confirm(
-                'Deseja restaurar as clientes de exemplo originais?'
-              )
-            ) {
-              onResetData();
-            }
-          }}
-          className="tap-target px-3.5 py-2.5 rounded-xl bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA] text-xs font-semibold flex items-center gap-1.5"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Restaurar Exemplos</span>
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  'Deseja restaurar as clientes e vendas de exemplo originais?'
+                )
+              ) {
+                onResetData();
+              }
+            }}
+            className="tap-target px-3.5 py-2.5 rounded-xl bg-[#F2F2F7] text-[#1C1C1E] hover:bg-[#E5E5EA] text-xs font-semibold flex items-center gap-1.5"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Restaurar Exemplos</span>
+          </button>
+
+          {onClearData && (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Deseja limpar todas as clientes e vendas de exemplo para começar do zero?'
+                  )
+                ) {
+                  onClearData();
+                }
+              }}
+              className="tap-target px-3.5 py-2.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Limpar Tudo (Começar do Zero)</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
